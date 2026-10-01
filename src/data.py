@@ -8,10 +8,9 @@ from pathlib import Path
 
 import numpy as np
 from gymnasium.envs.box2d.lunar_lander import heuristic
+from torch.utils.data import Dataset
 
 from .environment import make_environment
-
-from torch.utils.data import Dataset
 
 
 class TrajectoryDataset(Dataset):
