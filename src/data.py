@@ -3,14 +3,20 @@ I couldn't find a training dataset online, so we are generating it.
 I think that's what Gymnasium intends anyway.
 """
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 from gymnasium.envs.box2d.lunar_lander import heuristic
 from torch.utils.data import Dataset
 
-from .environment import make_environment
+from .environment import CONTINUOUS_ACTIONS, ENABLE_WIND, ENV_ID, make_environment
+
+
+# Edit these settings before running python -m src.data.
+EPISODES = 300
+FIRST_SEED = 0
+OUTPUT_PATH = Path("data/demonstrations.npz")
+INSPECTION_PATH = Path("data/one_episode.npz")
 
 
 class TrajectoryDataset(Dataset):
@@ -92,24 +98,16 @@ def collect_episode(env, seed):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--episodes", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument(
-        "--output", type=Path, default=Path("data/one_episode.npz")
-    )  # zip archive of named numpy arrays
-    args = parser.parse_args()
+    if EPISODES < 1 or OUTPUT_PATH.suffix != ".npz":
+        raise ValueError("Use positive EPISODES and a .npz OUTPUT_PATH")
 
-    if args.episodes < 1 or args.output.suffix != ".npz":
-        parser.error("Use a positive episode count and a .npz output path")
-
-    if args.output.exists():
-        parser.error("Choose a new output path; this one already exists")
+    if OUTPUT_PATH.exists():
+        raise FileExistsError("Choose a new OUTPUT_PATH; this dataset already exists")
 
     episodes = []
     env = make_environment()
     try:
-        for seed in range(args.seed, args.seed + args.episodes):
+        for seed in range(FIRST_SEED, FIRST_SEED + EPISODES):
             episode = collect_episode(env, seed)
             episodes.append(episode)
             print(
@@ -131,24 +129,24 @@ def main():
         ([0], np.cumsum([len(ep["actions"]) for ep in episodes]))
     )
 
-    arrays["episode_seeds"] = np.arange(args.seed, args.seed + args.episodes)
+    arrays["episode_seeds"] = np.arange(FIRST_SEED, FIRST_SEED + EPISODES)
     arrays["final_observations"] = np.stack(
         [ep["final_observation"] for ep in episodes]
     )
-    arrays["environment"] = np.asarray("LunarLander-v3")
+    arrays["environment"] = np.asarray(ENV_ID)
     arrays["teacher"] = np.asarray(
-        "Gymnasium heuristic; wind disabled; discrete actions"
+        f"Gymnasium heuristic; wind={ENABLE_WIND}; continuous={CONTINUOUS_ACTIONS}"
     )
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(args.output, **arrays)
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(OUTPUT_PATH, **arrays)
 
-    print("Saved", len(arrays["actions"]), "examples to", args.output)
+    print("Saved", len(arrays["actions"]), "examples to", OUTPUT_PATH)
 
 
 def print_data():
     # helper function for me to visualize data
-    with np.load("data/one_episode.npz") as data:
+    with np.load(INSPECTION_PATH, allow_pickle=False) as data:
         n = len(data["actions"])
 
         for step in [0, 1, n - 2, n - 1]:

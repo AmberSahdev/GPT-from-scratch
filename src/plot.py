@@ -1,11 +1,15 @@
+import csv
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+DATA_PATH = Path("data/one_episode.npz")
+FIGURE_PATH = Path("assets/one_episode.png")
+
 
 def main():
-    with np.load("data/one_episode.npz", allow_pickle=False) as data:
+    with np.load(DATA_PATH, allow_pickle=False) as data:
         observations = data["observations"]
         actions = data["actions"]
         rewards = data["rewards"]
@@ -32,8 +36,30 @@ def main():
     # Adjust spacing so axis labels do not overlap.
     fig.tight_layout()
 
+    FIGURE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIGURE_PATH, dpi=150)
+    plt.close(fig)
+
+
+def plot_pretraining(path="runs/experiment-01/pretrain.csv"):
+    with open(path) as file:
+        rows = list(csv.DictReader(file))
+
+    epochs = [int(row["epoch"]) for row in rows]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4))
+
+    axes[0].plot(epochs, [float(row["train_loss"]) for row in rows], label="train")
+    axes[0].plot(epochs, [float(row["validation_loss"]) for row in rows], label="validation")
+    axes[0].set(xlabel="Epoch", ylabel="Cross-entropy")
+    axes[0].legend()
+
+    axes[1].plot(epochs, [float(row["validation_accuracy"]) for row in rows])
+    axes[1].set(xlabel="Epoch", ylabel="Teacher-action agreement", ylim=(0, 1))
+
+    fig.tight_layout()
+
     Path("assets").mkdir(exist_ok=True)
-    fig.savefig("assets/one_episode.png", dpi=150)
+    fig.savefig("assets/pretraining.png", dpi=150)
     plt.close(fig)
 
 

@@ -17,24 +17,33 @@ import gymnasium as gym
 from gymnasium.envs.box2d.lunar_lander import heuristic
 
 
+# Shared simulator settings; other modules reuse make_environment().
+ENV_ID = "LunarLander-v3"
+CONTINUOUS_ACTIONS = False
+ENABLE_WIND = False
+# Settings for the standalone demo only.
+DEMO_SEED = 0
+DEMO_RENDER_MODE = "human"
+
+
 # Create a fresh simulator instance. None skips rendering and runs faster. Use "human" for a live window.
 def make_environment(render_mode=None):
     return gym.make(
-        "LunarLander-v3",
-        continuous=False,
-        enable_wind=False,  # Disable wind to keep the first learning task simpler.
+        ENV_ID,
+        continuous=CONTINUOUS_ACTIONS,
+        enable_wind=ENABLE_WIND,  # Disable wind to keep the first learning task simpler.
         render_mode=render_mode,
     )
 
 
 def main():
     # env is the simulator object we reset, step, and eventually close.
-    env = make_environment(render_mode="human")
+    env = make_environment(render_mode=DEMO_RENDER_MODE)
 
     # reset starts a new episode and returns (initial observation, extra info)
     # observation is an 8-number snapshot: [x, y, vx, vy, angle, angular_velocity, left_leg_contact, right_leg_contact]
-    observation, info = env.reset(seed=0)
-    env.action_space.seed(0)
+    observation, info = env.reset(seed=DEMO_SEED)
+    env.action_space.seed(DEMO_SEED)
 
     # This is a performance score, not a training loss or a count of successful landings.
     # LunarLander rewards progress toward landing and penalizes fuel use/crashes.

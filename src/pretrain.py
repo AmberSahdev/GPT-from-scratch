@@ -1,5 +1,6 @@
 import csv
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 import torch
@@ -12,7 +13,7 @@ from .model import GPT, ModelConfig
 # Settings for supervised training
 INITIAL_CHECKPOINT = Path("runs/experiment-01/untrained.pt")
 DATA_PATH = Path("data/demonstrations.npz")
-EPOCHS = 20
+EPOCHS = 50
 BATCH_SIZE = 128
 LEARNING_RATE = 3e-4
 WEIGHT_DECAY = 0.01
@@ -98,6 +99,9 @@ def main():
     np.savez(output_dir / "split.npz", train_ids=train_ids, validation_ids=validation_ids)
     
     best_loss = float("inf")
+    # Measure the full training loop, including validation and checkpoint saves.
+    # perf_counter measures elapsed wall-clock time with a monotonic clock.
+    training_started = perf_counter()
     with (output_dir / "pretrain.csv").open("w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["epoch", "train_loss", "validation_loss", "validation_accuracy"])
@@ -138,6 +142,9 @@ def main():
                 torch.save({"config": checkpoint["config"], "model": model.state_dict(),
                             "optimizer": optimizer.state_dict(), "epoch": epoch,
                             "validation_loss": validation_loss}, output_dir / "pretrained.pt")
+
+    elapsed_seconds = perf_counter() - training_started
+    print(f"Training completed in {elapsed_seconds:.1f} seconds ({elapsed_seconds / 60:.2f} minutes).")
 
 if __name__ == "__main__":
     main()

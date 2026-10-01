@@ -1,4 +1,3 @@
-import argparse
 import json
 from pathlib import Path
 
@@ -9,6 +8,14 @@ from PIL import Image
 
 from .environment import make_environment
 from .model import GPT, ModelConfig
+
+
+# Edit these settings before running python -m src.evaluate.
+STAGE = "untrained"  # Change to "pretrained" after supervised training.
+CHECKPOINT_PATH = Path("runs/experiment-01/untrained.pt")
+EPISODES = 20
+FIRST_SEED = 10000  # Keep identical across model stages for a fair comparison.
+GIF_PATH = None  # Example: Path("assets/untrained.gif"); None skips rendering.
 
 
 def make_stacked_environment(context_length, render_mode=None):
@@ -89,16 +96,10 @@ def evaluate(action_function, context_length, episodes, first_seed, gif_path=Non
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--stage", choices=["untrained", "pretrained", "rl"], required=True)
-    parser.add_argument("--episodes", type=int, default=20) # How many complete simulator episodes to run
-    parser.add_argument("--seed", type=int, default=10000)
-    parser.add_argument("--gif", type=Path) # Optional GIF output path; omitting it avoids rendering overhead.
-    
-    args = parser.parse_args()
-    if args.episodes < 1:
-        parser.error("--episodes must be positive")
+    if EPISODES < 1:
+        raise ValueError("EPISODES must be positive")
+    if STAGE not in ("untrained", "pretrained"):
+        raise ValueError("Use STAGE = 'untrained' or 'pretrained'; RL loading is not implemented yet")
     
     # Start with one CPU worker thread to avoid overhead on small networks; benchmark before changing.
     torch.set_num_threads(1)
@@ -106,7 +107,7 @@ def main():
     # TODO - RL evaluation
 
     # Load tensor/dictionary checkpoint data onto CPU so a GPU is not required for evaluation.
-    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
+    checkpoint = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=True)
     config = ModelConfig(**checkpoint["config"])
     model = GPT(config)
     model.load_state_dict(checkpoint["model"])
@@ -124,11 +125,11 @@ def main():
             # Choose the largest of four logits
             return int(model(states).argmax(dim=-1).item())
     
-    results = evaluate(choose, context_length, args.episodes, args.seed, args.gif)
+    results = evaluate(choose, context_length, EPISODES, FIRST_SEED, GIF_PATH)
 
-    results["checkpoint"] = str(args.checkpoint)
+    results["checkpoint"] = str(CHECKPOINT_PATH)
     results["action_selection"] = "deterministic argmax"
-    output = args.checkpoint.parent / f"{args.stage}_evaluation.json"
+    output = CHECKPOINT_PATH.parent / f"{STAGE}_evaluation.json"
 
     # Save readable JSON scores so README numbers can be traced to actual episodes.
     output.write_text(json.dumps(results, indent=2) + "\n")
