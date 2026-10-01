@@ -11,6 +11,52 @@ from gymnasium.envs.box2d.lunar_lander import heuristic
 
 from .environment import make_environment
 
+from torch.utils.data import Dataset
+
+
+class TrajectoryDataset(Dataset):
+    """
+    Expose generated training data through PyTorch's Dataset interface.
+    Dataset is PyTorch's interface for retrieving one example by index. 
+    A DataLoader later stacks examples into batches.
+    """
+    def __init__(self, path, episode_ids, context_length):
+        self.context_length = context_length
+        with np.load(path, allow_pickle=False) as data:
+            self.observations = data["observations"].copy()
+            self.actions = data["actions"].copy()
+            offsets = data["episode_offsets"].copy()
+
+        self.indices = []
+        for episode_id in episode_ids:
+            start, end = map(int, offsets[episode_id : episode_id + 2])
+            self.indices.extend((start, index) for index in range(start, end))
+
+    # DataLoader calls this to learn how many training examples are available.
+    def __len__(self):
+        return len(self.indices)
+
+    # DataLoader calls this to get one history window and its action label.
+    def __getitem__(self, index):
+        episode_start, current = self.indices[index]
+
+        # Never reach before this episode's reset or further back than the context budget.
+        start = max(episode_start, current - self.context_length + 1)
+
+        # Exclude every future state to avoid leaking the answer.
+        window = self.observations[start : current + 1]
+
+        # Early timesteps have too little history; calculate how much padding they need.
+        missing = self.context_length - len(window)
+
+        if missing:
+            # Repeat s0 at the left, matching the live frame-stack wrapper's reset padding.
+            padding = np.repeat(
+                self.observations[episode_start : episode_start + 1], missing, axis=0
+            )
+            window = np.concatenate((padding, window))
+
+        return window.copy(), self.actions[current]
 
 
 def collect_episode(env, seed):
