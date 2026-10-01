@@ -45,8 +45,8 @@ def main():
     try:
         # Keep advancing this episode until an ending flag tells us to stop.
         while True:
-            # Choose one valid engine command at random. A learned policy will eventually replace this line with a state-based decision.
-            action = env.action_space.sample()
+            # action = env.action_space.sample() # random command
+            action = heuristic(env, observation) # heuristic is Gymnasium's handwritten controller, not a learned network
 
             # Apply the action, advance the physics by one simulator step.
             # observation: new state after that action
