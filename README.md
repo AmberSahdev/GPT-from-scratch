@@ -1,74 +1,90 @@
-I'm going to build GPT from scratch. 
+# GPT from Scratch
 
-I am going to repurpose it to play games in a simulation environment since I don't have the compute to train a language model locally. 
+A GPT-style decoder-only Transformer with multi-head Attention and **101,060 parameters**, built from scratch in PyTorch.
 
-But it will still contain all the aspects of the GPT architecture: 
-- Transformer
-- Multiheaded Self-Attention
-- Decoder
-
-Since I'm going to be playing a game, it will actually be really fun to fine-tune using Reinforcement Learning as well.
+I repurposed the GPT architecture to land Gymnasium's LunarLander because:
+1. I don't have enough compute to train a good language model locally
+2. I wanted an easy way to incorporate RL
+3. I wanted visuals
 
 ---
 
-# Design
+<table>
+  <tr>
+    <th>Untrained</th>
+    <th>Pretrained</th>
+    <th>Pretrained + RL</th>
+  </tr>
+  <tr>
+    <td><img src="assets/untrained_comparison.gif" alt="Five untrained flights" width="300"></td>
+    <td><img src="assets/pretrained_comparison.gif" alt="Five pretrained flights" width="300"></td>
+    <td><img src="assets/rl_comparison.gif" alt="Five flights from the best RL checkpoint" width="300"></td>
+  </tr>
+</table>
+
+<blockquote>
+  <sub>We generated the training data from simulating Gymnasium's handwritten heuristic over 300 flights / 75,949 state–action examples.<br>
+  RL then picks up from the best validation checkpoint and learns from simulator rewards.</sub>
+</blockquote>
+
+## Design
 
 ```
 INPUT: history of 8 observations
 Each observation contains 8 physical measurements
 Shape: (B, 8, 8)
-         │
-         ▼
+          │
+          ▼
 STATE EMBEDDING: Linear(8 → 64)
 Each observation becomes a 64-dimensional vector
-         │
-         ▼
+          │
+          ▼
 ADD POSITION EMBEDDINGS
 Shape: (B, 8, 64)
-         │
-         ▼
-┌────────────── TRANSFORMER BLOCK 1 ──────────────┐
-│                                                │
-│  x ────────────────────────────────┐           │
-│  │                                 │           │
-│  ▼                                 │           │
-│  LayerNorm                         │           │
-│  │                                 │           │
-│  ▼                                 │           │
-│  MULTI-HEAD ATTENTION              │           │
-│  Same 64 features go to EVERY head │           │
-│  │                                 │           │
-│  ├── Head 1 ──► 16 features         │           │
-│  ├── Head 2 ──► 16 features         │           │
-│  ├── Head 3 ──► 16 features         │           │
-│  └── Head 4 ──► 16 features         │           │
-│         │                          │           │
-│         ▼                          │           │
-│  Concatenate: 16 × 4 = 64           │           │
-│         │                          │           │
-│         ▼                          │           │
-│  Projection: Linear(64 → 64)        │           │
-│         │                          │           │
-│         ▼                          │           │
-│       ADD ◄────────────────────────┘           │
-│         │              Residual connection    │
-│         ├──────────────────────────┐           │
-│         ▼                          │           │
-│  LayerNorm                         │           │
-│         │                          │           │
-│         ▼                          │           │
-│  FEEDFORWARD                       │           │
-│  Linear(64 → 256)                  │           │
-│         │                          │           │
-│        ReLU                        │           │
-│         │                          │           │
-│  Linear(256 → 64)                  │           │
-│         │                          │           │
-│         ▼                          │           │
-│       ADD ◄────────────────────────┘           │
-│         │              Residual connection    │
-│  Output: (B, 8, 64)                            │
-└─────────┬─────────────────────────────────────┘
+          │
+          ▼
+┌────────────── TRANSFORMER BLOCK 1 ───────────────┐
+│                                                  │
+│  x ─────────────────────────────────┐            │
+│  │                                  │            │
+│  ▼                                  │            │
+│  LayerNorm                          │            │
+│  │                                  │            │
+│  ▼                                  │            │
+│  MULTI-HEAD ATTENTION               │            │
+│  Same 64 features go to EVERY head  │            │
+│  │                                  │            │
+│  ├── Head 1 ──► 16 features         │            │
+│  ├── Head 2 ──► 16 features         │            │
+│  ├── Head 3 ──► 16 features         │            │
+│  └── Head 4 ──► 16 features         │            │
+│         │                           │            │
+│         ▼                           │            │
+│  Concatenate: 16 × 4 = 64           │            │
+│         │                           │            │
+│         ▼                           │            │
+│  Projection: Linear(64 → 64)        │            │
+│         │                           │            │
+│         ▼                           │            │
+│       ADD ◄─────────────────────────┘            │
+│         │              Residual connection       │
+│         ├───────────────────────────┐            │
+│         ▼                           │            │
+│  LayerNorm                          │            │
+│         │                           │            │
+│         ▼                           │            │
+│  FEEDFORWARD                        │            │
+│  Linear(64 → 256)                   │            │
+│         │                           │            │
+│        ReLU                         │            │
+│         │                           │            │
+│  Linear(256 → 64)                   │            │
+│         │                           │            │
+│         ▼                           │            │
+│       ADD ◄─────────────────────────┘            │
+│         │              Residual connection       │
+│  Output: (B, 8, 64)                              │
+└─────────┬────────────────────────────────────────┘
           │
           ▼
 TRANSFORMER BLOCK 2
@@ -92,6 +108,7 @@ Four action scores:
 ```
 
 Inside each attention head:
+
 ```
 Input: (B, 8, 64)
           │
@@ -117,13 +134,60 @@ Input: (B, 8, 64)
        Output: (B, 8, 16)
 ```
 
-Total Params
+`B` is batch size. During RL, SB3 uses these GPT features with an action head and an additional value head that predicts future reward.
+
+## Parameter count
+
+| Component | Calculation | Parameters |
+| :--- | :--- | ---: |
+| State embedding | `8 × 64 + 64` | 576 |
+| Position embedding | `8 × 64` | 512 |
+| K/Q/V projections ×3 | `2 × 3 × 4 × 64 × 16` | 24,576 |
+| Attention output projections | `2 × (64 × 64 + 64)` | 8,320 |
+| Feedforward (64 → 256 → 64) | `2 × (64 × 256 + 256 × 64 + 256 + 64)` | 66,176 |
+| LayerNorms ×2 | `2 × 2 × (64 + 64)` | 512 |
+| **Transformer blocks ×2 subtotal** | `2 × 49,792` | **99,584** |
+| Final LayerNorm | `2 × 64` | 128 |
+| Action head | `64 × 4 + 4` | 260 |
+| **GPT total** | | **101,060** |
+
+## Training
+
+![Pretraining loss and subsequent RL evaluation rewards](assets/training.png)
+
+![Action accuracy and flight success with the start of RL marked](assets/accuracy.png)
+
+| Checkpoint | Mean reward | Flights scoring ≥200 |
+| :--- | ---: | ---: |
+| Untrained | −484.5 | 0% |
+| Pretrained | 233.1 | 89% |
+| Best PPO, step 15,000 | 235.8 | 90% |
+| Final PPO, step 64,000 | 80.7 | 38% |
+
+
+## Run locally
+
+From the repository root, with Python 3.12 installed through pyenv:
+
+```bash
+pyenv local 3.12
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+python -m src.environment     # Watch the heuristic fly
+python -m src.initialize      # Save a randomly initialized GPT
+python -m src.data            # Generate the training dataset
+python -m src.pretrain        # Learn the heuristic's actions
+python -m src.rl_finetuning   # Fine-tune GPT with PPO
+python -m src.showcase        # Generate all three GIFs, scores, and training figure
+python -m src.evaluate        # Evaluate any stage (specified top of file)
 ```
-State embedding          576
-Position embedding       512
-Two Transformer blocks   99,584
-Final LayerNorm          128
-Action head: 64×4 + 4    260
-─────────────────────────────────
-Total                    101,060
-```
+
+## References
+
+- [3Blue1Brown: Neural Networks Series](https://www.youtube.com/watch?v=aircAruvnKk&list=PLZHQObOWTQDMRtm8h9bG9P06WINNoBnCR)
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+- [Neural Networks: Zero to Hero](https://karpathy.ai/zero-to-hero.html)
+- [OpenAI: Introducing GPT](https://openai.com/index/language-unsupervised/)
+- [Gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/)

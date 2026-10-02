@@ -13,7 +13,7 @@ from .model import GPT, ModelConfig
 # Settings for supervised training
 INITIAL_CHECKPOINT = Path("runs/experiment-01/untrained.pt")
 DATA_PATH = Path("data/demonstrations.npz")
-EPOCHS = 50
+EPOCHS = 10
 BATCH_SIZE = 128
 LEARNING_RATE = 3e-4
 WEIGHT_DECAY = 0.01
