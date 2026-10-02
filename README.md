@@ -5,7 +5,7 @@ A GPT-style decoder-only Transformer with multi-head Attention and **101,060 par
 I repurposed the GPT architecture to land Gymnasium's LunarLander because:
 1. I don't have enough compute to train a good language model locally
 2. I wanted an easy way to incorporate RL
-3. I wanted visuals
+3. I like visuals
 
 ---
 
