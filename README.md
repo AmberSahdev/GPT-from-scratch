@@ -9,30 +9,41 @@ I repurposed the GPT architecture to land Gymnasium's LunarLander because:
 
 ---
 
-<table>
-  <tr>
-    <th>Untrained</th>
-    <th>Pretrained</th>
-    <th>Pretrained + RL</th>
-  </tr>
-  <tr>
-    <td><img src="assets/untrained_comparison.gif" alt="Five untrained flights" width="300"></td>
-    <td><img src="assets/pretrained_comparison.gif" alt="Five pretrained flights" width="300"></td>
-    <td><img src="assets/rl_comparison.gif" alt="Five flights from the best RL checkpoint" width="300"></td>
-  </tr>
-</table>
+<p>
+  <img src="assets/untrained_comparison.gif" alt="Untrained: five flights" width="32%">
+  <img src="assets/pretrained_comparison.gif" alt="Pretrained: five flights" width="32%">
+  <img src="assets/rl_comparison.gif" alt="Pretrained + RL: five flights from the best RL checkpoint" width="32%">
+</p>
 
 <blockquote>
   <sub>We generated the training data from simulating Gymnasium's handwritten heuristic over 300 flights / 75,949 state–action examples.<br>
   RL then picks up from the best validation checkpoint and learns from simulator rewards.</sub>
 </blockquote>
 
+
+## Parameter count
+
+| Component | Calculation | Parameters |
+| :--- | :--- | ---: |
+| State embedding | `8 × 64 + 64` | 576 |
+| Position embedding | `8 × 64` | 512 |
+| K/Q/V projections ×3 | `2 × 3 × 4 × 64 × 16` | 24,576 |
+| Attention output projections | `2 × (64 × 64 + 64)` | 8,320 |
+| Feedforward (64 → 256 → 64) | `2 × (64 × 256 + 256 × 64 + 256 + 64)` | 66,176 |
+| LayerNorms ×2 | `2 × 2 × (64 + 64)` | 512 |
+| **Transformer blocks ×2 subtotal** | `2 × 49,792` | **99,584** |
+| Final LayerNorm | `2 × 64` | 128 |
+| Action head | `64 × 4 + 4` | 260 |
+| **GPT total** | | **101,060** |
+
+---
+
 ## Design
 
 ```
 INPUT: history of 8 observations
 Each observation contains 8 physical measurements
-Shape: (B, 8, 8)
+Shape: (B, 8, 8) -- (B is batch size)
           │
           ▼
 STATE EMBEDDING: Linear(8 → 64)
@@ -134,22 +145,7 @@ Input: (B, 8, 64)
        Output: (B, 8, 16)
 ```
 
-`B` is batch size. During RL, SB3 uses these GPT features with an action head and an additional value head that predicts future reward.
-
-## Parameter count
-
-| Component | Calculation | Parameters |
-| :--- | :--- | ---: |
-| State embedding | `8 × 64 + 64` | 576 |
-| Position embedding | `8 × 64` | 512 |
-| K/Q/V projections ×3 | `2 × 3 × 4 × 64 × 16` | 24,576 |
-| Attention output projections | `2 × (64 × 64 + 64)` | 8,320 |
-| Feedforward (64 → 256 → 64) | `2 × (64 × 256 + 256 × 64 + 256 + 64)` | 66,176 |
-| LayerNorms ×2 | `2 × 2 × (64 + 64)` | 512 |
-| **Transformer blocks ×2 subtotal** | `2 × 49,792` | **99,584** |
-| Final LayerNorm | `2 × 64` | 128 |
-| Action head | `64 × 4 + 4` | 260 |
-| **GPT total** | | **101,060** |
+---
 
 ## Training
 
@@ -164,6 +160,7 @@ Input: (B, 8, 64)
 | Best PPO, step 15,000 | 235.8 | 90% |
 | Final PPO, step 64,000 | 80.7 | 38% |
 
+---
 
 ## Run locally
 
@@ -183,6 +180,7 @@ python -m src.rl_finetuning   # Fine-tune GPT with PPO
 python -m src.showcase        # Generate all three GIFs, scores, and training figure
 python -m src.evaluate        # Evaluate any stage (specified top of file)
 ```
+---
 
 ## References
 
