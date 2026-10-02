@@ -49,7 +49,9 @@ def plot_pretraining(path="runs/experiment-01/pretrain.csv"):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
 
     axes[0].plot(epochs, [float(row["train_loss"]) for row in rows], label="train")
-    axes[0].plot(epochs, [float(row["validation_loss"]) for row in rows], label="validation")
+    axes[0].plot(
+        epochs, [float(row["validation_loss"]) for row in rows], label="validation"
+    )
     axes[0].set(xlabel="Epoch", ylabel="Cross-entropy")
     axes[0].legend()
 
@@ -60,6 +62,28 @@ def plot_pretraining(path="runs/experiment-01/pretrain.csv"):
 
     Path("assets").mkdir(exist_ok=True)
     fig.savefig("assets/pretraining.png", dpi=150)
+    plt.close(fig)
+
+
+def plot_rl(path="runs/experiment-01/rl/evaluations.npz"):
+    with np.load(path, allow_pickle=False) as data:
+        steps = data["timesteps"]
+        scores = data["results"]
+
+    mean, std = scores.mean(axis=1), scores.std(axis=1)
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(steps, mean, label="Mean evaluation reward")
+
+    ax.fill_between(
+        steps, mean - std, mean + std, alpha=0.2, label="One episode standard deviation"
+    )
+    ax.axhline(200, color="gray", linestyle="--", label="200-point reference")
+    ax.set(xlabel="Environment steps", ylabel="Episode reward")
+    ax.legend()
+
+    fig.tight_layout()
+    Path("assets").mkdir(exist_ok=True)
+    fig.savefig("assets/rl_rewards.png", dpi=150)
     plt.close(fig)
 
 

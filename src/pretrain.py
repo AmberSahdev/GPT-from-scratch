@@ -66,7 +66,6 @@ def main():
     print("Training device:", device)
 
     torch.manual_seed(SEED)
-    torch.set_num_threads(1)
 
     checkpoint = torch.load(INITIAL_CHECKPOINT, map_location="cpu", weights_only=True)
     config = ModelConfig(**checkpoint["config"])

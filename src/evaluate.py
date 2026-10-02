@@ -1,3 +1,4 @@
+# measures a saved model without training it
 import json
 from pathlib import Path
 
@@ -5,14 +6,15 @@ import numpy as np
 import torch
 from gymnasium.wrappers import FrameStackObservation
 from PIL import Image
+from stable_baselines3 import PPO
 
 from .environment import make_environment
 from .model import GPT, ModelConfig
 
-
 # Edit these settings before running python -m src.evaluate.
-STAGE = "untrained"  # Change to "pretrained" after supervised training.
+STAGE = "untrained"  # Choose "untrained", "pretrained", or "rl".
 CHECKPOINT_PATH = Path("runs/experiment-01/untrained.pt")
+# For RL: Path("runs/experiment-01/rl/best_model.zip") or final.zip.
 EPISODES = 20
 FIRST_SEED = 10000  # Keep identical across model stages for a fair comparison.
 GIF_PATH = None  # Example: Path("assets/untrained.gif"); None skips rendering.
@@ -98,32 +100,33 @@ def evaluate(action_function, context_length, episodes, first_seed, gif_path=Non
 def main():
     if EPISODES < 1:
         raise ValueError("EPISODES must be positive")
-    if STAGE not in ("untrained", "pretrained"):
-        raise ValueError("Use STAGE = 'untrained' or 'pretrained'; RL loading is not implemented yet")
-    
-    # Start with one CPU worker thread to avoid overhead on small networks; benchmark before changing.
-    torch.set_num_threads(1)
+    if STAGE not in ("untrained", "pretrained", "rl"):
+        raise ValueError("Use STAGE = 'untrained', 'pretrained', or 'rl'")
 
-    # TODO - RL evaluation
+    if STAGE == "rl":
+        # SB3 checkpoints are ZIP files containing the GPT, action head, and value head.
+        # Evaluation uses CPU so it also works without the training GPU.
+        agent = PPO.load(CHECKPOINT_PATH, device="cpu")
+        context_length = agent.observation_space.shape[0]
 
-    # Load tensor/dictionary checkpoint data onto CPU so a GPU is not required for evaluation.
-    checkpoint = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=True)
-    config = ModelConfig(**checkpoint["config"])
-    model = GPT(config)
-    model.load_state_dict(checkpoint["model"])
+        def choose(history):
+            # Select the most likely action; predict performs inference without learning.
+            action, _ = agent.predict(history, deterministic=True)
+            return int(np.asarray(action).item())
+    else:
+        # Untrained/pretrained stages use our original PyTorch checkpoint format.
+        checkpoint = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=True)
+        config = ModelConfig(**checkpoint["config"])
+        model = GPT(config)
+        model.load_state_dict(checkpoint["model"])
+        model.eval()
+        context_length = config.context_length
 
-    # Set evaluation mode 
-    model.eval()
-
-    context_length = config.context_length
-
-    def choose(history):
-        # Choose the action from the logit output of the model 
-        with torch.no_grad():  # Skip recording gradient operations
-            # Convert a (T,8) NumPy history to a float tensor, then add batch axis: (1,T,8).
-            states = torch.as_tensor(history, dtype=torch.float32).unsqueeze(0)
-            # Choose the largest of four logits
-            return int(model(states).argmax(dim=-1).item())
+        def choose(history):
+            with torch.no_grad():
+                # Add the batch axis: (T,8) -> (1,T,8).
+                states = torch.as_tensor(history, dtype=torch.float32).unsqueeze(0)
+                return int(model(states).argmax(dim=-1).item())
     
     results = evaluate(choose, context_length, EPISODES, FIRST_SEED, GIF_PATH)
 

@@ -16,12 +16,10 @@ LunarLander has
 import gymnasium as gym
 from gymnasium.envs.box2d.lunar_lander import heuristic
 
-
 # Shared simulator settings; other modules reuse make_environment().
 ENV_ID = "LunarLander-v3"
 CONTINUOUS_ACTIONS = False
 ENABLE_WIND = False
-# Settings for the standalone demo only.
 DEMO_SEED = 0
 DEMO_RENDER_MODE = "human"
 

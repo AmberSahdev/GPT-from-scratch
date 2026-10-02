@@ -11,7 +11,6 @@ from torch.utils.data import Dataset
 
 from .environment import CONTINUOUS_ACTIONS, ENABLE_WIND, ENV_ID, make_environment
 
-
 # Edit these settings before running python -m src.data.
 EPISODES = 300
 FIRST_SEED = 0
