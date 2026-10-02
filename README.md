@@ -9,11 +9,18 @@ I repurposed the GPT architecture to land Gymnasium's LunarLander because:
 
 ---
 
-<p>
-  <img src="assets/untrained_comparison.gif" alt="Untrained: five flights" width="32%">
-  <img src="assets/pretrained_comparison.gif" alt="Pretrained: five flights" width="32%">
-  <img src="assets/rl_comparison.gif" alt="Pretrained + RL: five flights from the best RL checkpoint" width="32%">
-</p>
+<table width="100%">
+  <tr>
+    <th width="33%">Untrained</th>
+    <th width="33%">Pretrained</th>
+    <th width="33%">Pretrained + RL</th>
+  </tr>
+  <tr>
+    <td><img src="assets/untrained_comparison.gif" alt="Untrained: five flights" width="100%"></td>
+    <td><img src="assets/pretrained_comparison.gif" alt="Pretrained: five flights" width="100%"></td>
+    <td><img src="assets/rl_comparison.gif" alt="Pretrained + RL: five flights from the best RL checkpoint" width="100%"></td>
+  </tr>
+</table>
 
 <blockquote>
   <sub>We generated the training data from simulating Gymnasium's handwritten heuristic over 300 flights / 75,949 state–action examples.<br>
@@ -164,7 +171,7 @@ Input: (B, 8, 64)
 
 ## Run locally
 
-From the repository root, with Python 3.12 installed through pyenv:
+From the repository root:
 
 ```bash
 pyenv local 3.12
