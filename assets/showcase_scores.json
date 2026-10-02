@@ -1,6 +1,10 @@
 {
   "untrained": {
     "checkpoint": "runs/experiment-01/untrained.pt",
+    "checkpoint_sha256": "b69bf20918a104262ca3976a635cd21b2c99a0596f340161c32fd5f8710a9f1b",
+    "rl_training_steps": 0,
+    "gif": "assets/untrained_comparison.gif",
+    "action_selection": "deterministic argmax",
     "mean_reward": -488.16523884370025,
     "std_reward": 44.75340518343334,
     "episodes": [
@@ -43,6 +47,10 @@
   },
   "pretrained": {
     "checkpoint": "runs/experiment-01/pretrained.pt",
+    "checkpoint_sha256": "dff24038828e684dfedf234b765f785ee7730770242213776775ec14c3b6cc9a",
+    "rl_training_steps": 0,
+    "gif": "assets/pretrained_comparison.gif",
+    "action_selection": "deterministic argmax",
     "mean_reward": 249.20170641789727,
     "std_reward": 26.165582684782724,
     "episodes": [
@@ -84,42 +92,92 @@
     ]
   },
   "rl": {
-    "checkpoint": "runs/experiment-01/rl-64000-20261001-193011/best_model.zip",
-    "mean_reward": 270.1237399451271,
-    "std_reward": 22.48813612657542,
+    "checkpoint": "runs/experiment-01/ppo-pretrained-192k-checkpoints-20261002/final.zip",
+    "checkpoint_sha256": "a166776175a82b19681e5a9dc9d0e1bbf36d79856943a4f6ccf0c86404a30534",
+    "rl_training_steps": 192000,
+    "gif": "assets/rl_comparison.gif",
+    "action_selection": "deterministic argmax",
+    "mean_reward": 272.05018427064783,
+    "std_reward": 6.125819595213177,
     "episodes": [
       {
         "seed": 10000,
-        "reward": 259.02460182106284,
-        "steps": 181,
+        "reward": 275.2227570872574,
+        "steps": 201,
         "safe_rest": true,
         "truncated": false
       },
       {
         "seed": 10001,
-        "reward": 245.4561898769486,
-        "steps": 293,
+        "reward": 280.31120966390466,
+        "steps": 268,
         "safe_rest": true,
         "truncated": false
       },
       {
         "seed": 10002,
-        "reward": 312.00294539765616,
-        "steps": 237,
+        "reward": 262.4321374568583,
+        "steps": 419,
         "safe_rest": true,
         "truncated": false
       },
       {
         "seed": 10003,
-        "reward": 263.5779859496056,
-        "steps": 172,
+        "reward": 268.3888988311504,
+        "steps": 197,
         "safe_rest": true,
         "truncated": false
       },
       {
         "seed": 10004,
-        "reward": 270.55697668036225,
-        "steps": 205,
+        "reward": 273.89591831406847,
+        "steps": 242,
+        "safe_rest": true,
+        "truncated": false
+      }
+    ]
+  },
+  "rl_scratch": {
+    "checkpoint": "runs/experiment-01/ppo-scratch-192k-checkpoints-20261002/final.zip",
+    "checkpoint_sha256": "1fb155c4ba7aee2aa061773e617d735de4f36af386bca6ba8fdf4c12527166ff",
+    "rl_training_steps": 192000,
+    "gif": "assets/rl_scratch_comparison.gif",
+    "action_selection": "deterministic argmax",
+    "mean_reward": 232.28206488228093,
+    "std_reward": 25.582064496426373,
+    "episodes": [
+      {
+        "seed": 10000,
+        "reward": 201.62287122539357,
+        "steps": 293,
+        "safe_rest": true,
+        "truncated": false
+      },
+      {
+        "seed": 10001,
+        "reward": 218.36284404495308,
+        "steps": 555,
+        "safe_rest": true,
+        "truncated": false
+      },
+      {
+        "seed": 10002,
+        "reward": 278.2973057569768,
+        "steps": 347,
+        "safe_rest": true,
+        "truncated": false
+      },
+      {
+        "seed": 10003,
+        "reward": 234.72945548473396,
+        "steps": 371,
+        "safe_rest": true,
+        "truncated": false
+      },
+      {
+        "seed": 10004,
+        "reward": 228.39784789934717,
+        "steps": 350,
         "safe_rest": true,
         "truncated": false
       }

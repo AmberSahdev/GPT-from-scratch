@@ -1,11 +1,17 @@
 # GPT from Scratch
 
-A GPT-style decoder-only Transformer with multi-head Attention and **101,060 parameters**, built from scratch in PyTorch.
+A GPT-style decoder-only Transformer with multi-head Attention and **100k parameters**, built from scratch in PyTorch.
+
+<table width="50%" align="center"><td>
+
+---
+
+</td></table>
 
 I repurposed the GPT architecture to land Gymnasium's LunarLander because:
-1. I don't have enough compute to train a good language model locally
-2. I wanted an easy way to incorporate RL
-3. I like visuals
+1. I don't have enough compute to train a good language model locally.
+2. I wanted an easy way to incorporate RL.
+3. I like visuals.
 
 ---
 
@@ -18,7 +24,7 @@ I repurposed the GPT architecture to land Gymnasium's LunarLander because:
   <tr>
     <td><img src="assets/untrained_comparison.gif" alt="Untrained: five flights" width="100%"></td>
     <td><img src="assets/pretrained_comparison.gif" alt="Pretrained: five flights" width="100%"></td>
-    <td><img src="assets/rl_comparison.gif" alt="Pretrained + RL: five flights from the best RL checkpoint" width="100%"></td>
+    <td><img src="assets/rl_comparison.gif" alt="Pretrained + RL: five flights from the final 192,000-step PPO checkpoint" width="100%"></td>
   </tr>
 </table>
 
@@ -107,9 +113,8 @@ Shape: (B, 8, 64)
           ▼
 TRANSFORMER BLOCK 2
 ...
+Same Structure
 ...
-...
-Same structure, its own learned weights
           │
           ▼
 FINAL LAYERNORM
@@ -147,7 +152,7 @@ Input: (B, 8, 64)
     Softmax                │
        │                   │
   Attention weights        │
-  Shape: (B, 8, 8)          │
+  Shape: (B, 8, 8)         │
        │                   │
        └─────── × ─────────┘
                 │
@@ -159,16 +164,43 @@ Input: (B, 8, 64)
 
 ## Training
 
-![Pretraining loss and subsequent RL evaluation rewards](assets/training.png)
+| Model | Success Rate | Average Score | Teacher-Action Agreement |
+| :--- | ---: | ---: | ---: |
+| Untrained | 0% | -491.1 | 5.95% |
+| Pretrained | 87% | 224.3 | 92.72% |
+| RL | 40% | 41.6 | 50.27% |
+| Pretrained + RL | **94%** | **264.8** | 82.92% |
 
-![Action accuracy and flight success with the start of RL marked](assets/accuracy.png)
+Both RL stages used 192,000 simulator steps. All four models use the same 100 test flights for the table and gifs above. Success means scoring at least 200. Teacher-action agreement measures imitation of the Gymnasium heuristic policy, not flight performance.
 
-| Checkpoint | Mean reward | Flights scoring ≥200 |
-| :--- | ---: | ---: |
-| Untrained | −484.5 | 0% |
-| Pretrained | 233.1 | 89% |
-| Best PPO, step 15,000 | 235.8 | 90% |
-| Final PPO, step 64,000 | 80.7 | 38% |
+### 1. Pretraining
+
+Pretraining uses supervised learning to predict actions. We generated the training dataset of 300 flights / 75,949 state–action examples from Gymnasium's LunarLander heuristic, trained for 10 epochs, and kept the checkpoint with the lowest validation loss.
+
+![Pretraining loss and teacher-action agreement](assets/pretraining.png)
+
+### 2. Reinforcement learning (PPO)
+
+```text
+                     ┌→ existing action head: choose an action
+Pretrained GPT ──────┤
+                     └→ new value head for RL: predict future reward
+```
+
+PPO starts with the pretrained GPT and action head. We then use SB3 to add a randomly initialized `nn.Linear(64, 1)` value head (65 parameters) to predict future reward from the same network. 
+
+
+The actor loss trains the action head, the value loss trains the value head, and both update the shared GPT.
+
+<p align="center">
+  <img src="assets/rl_scratch_comparison.gif" alt="RL without pretraining: five flights from the final 192,000-step PPO checkpoint" width="240"><br>
+  <sub>We also trained the network from scratch using RL for <del> fun</del> science.</sub>
+</p>
+
+After RL, success rose from **87% to 94%**, while teacher-action agreement fell from 92.72% to 82.92%. The model also improved its flight performance while matching the teacher less often: the beginnings of emergent behavior.
+
+![Success rate and average score throughout RL training](assets/rl_rewards.png)
+
 
 ---
 
@@ -186,9 +218,11 @@ python -m src.environment     # Watch the heuristic fly
 python -m src.initialize      # Save a randomly initialized GPT
 python -m src.data            # Generate the training dataset
 python -m src.pretrain        # Learn the heuristic's actions
-python -m src.rl_finetuning   # Fine-tune GPT with PPO
-python -m src.showcase        # Generate all three GIFs, scores, and training figure
-python -m src.evaluate        # Evaluate any stage (specified top of file)
+python -m src.rl_finetuning   # PPO from the pretrained GPT
+python -m src.rl_from_scratch # PPO from the untrained GPT
+python -m src.evaluate        # Evaluate the four models and checkpoint progress
+python -m src.plot            # Regenerate the graphs above
+python -m src.gif             # Regenerate the four model comparison GIFs
 ```
 ---
 
