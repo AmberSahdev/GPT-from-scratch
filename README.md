@@ -106,6 +106,9 @@ Shape: (B, 8, 64)
           │
           ▼
 TRANSFORMER BLOCK 2
+...
+...
+...
 Same structure, its own learned weights
           │
           ▼
