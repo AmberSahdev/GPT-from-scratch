@@ -2,11 +2,9 @@
 
 A GPT-style decoder-only Transformer with multi-head Attention and **100k parameters**, built from scratch in PyTorch.
 
-<table width="50%" align="center"><td>
-
----
-
-</td></table>
+<p align="center">
+  <img src="assets/separator.svg" width="50%" alt="">
+</p>
 
 I repurposed the GPT architecture to land Gymnasium's LunarLander because:
 1. I don't have enough compute to train a good language model locally.
@@ -197,7 +195,7 @@ The actor loss trains the action head, the value loss trains the value head, and
   <sub>We also trained the network from scratch using RL for <del> fun</del> science.</sub>
 </p>
 
-After RL, success rose from **87% to 94%**, while teacher-action agreement fell from 92.72% to 82.92%. The model also improved its flight performance while matching the teacher less often: the beginnings of emergent behavior.
+After RL, success rose from **87% to 94%**, while teacher-action agreement fell from 92.72% to 82.92%. The model improved its flight performance while matching the teacher less often: the beginnings of emergent behavior.
 
 ![Success rate and average score throughout RL training](assets/rl_rewards.png)
 
