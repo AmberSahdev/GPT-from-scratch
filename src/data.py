@@ -11,11 +11,9 @@ from torch.utils.data import Dataset
 
 from .environment import CONTINUOUS_ACTIONS, ENABLE_WIND, ENV_ID, make_environment
 
-# Edit these settings before running python -m src.data.
 EPISODES = 300
 FIRST_SEED = 0
 OUTPUT_PATH = Path("data/demonstrations.npz")
-INSPECTION_PATH = Path("data/one_episode.npz")
 
 
 class TrajectoryDataset(Dataset):
@@ -64,21 +62,18 @@ class TrajectoryDataset(Dataset):
 
 
 def collect_episode(env, seed):
-    # returns a dictionary mapping observation + action to new state
+    # Record each teacher action with its observation and reward
     observation, _ = env.reset(seed=seed)
     observations, actions, rewards = [], [], []
-    terminations, truncations = [], []
 
     while True:
-        # Ask the teacher which engine to use; convert its result to a plain integer ID.
+        # Ask the teacher which engine to use. convert its result to a plain integer ID.
         action = int(heuristic(env, observation))
 
         observations.append(observation.copy())
         actions.append(action)
         observation, reward, terminated, truncated, _ = env.step(action)
         rewards.append(reward)
-        terminations.append(terminated)
-        truncations.append(truncated)
 
         if terminated or truncated:
             break
@@ -88,11 +83,6 @@ def collect_episode(env, seed):
         "observations": np.asarray(observations, dtype=np.float32),
         "actions": np.asarray(actions, dtype=np.int64),
         "rewards": np.asarray(rewards, dtype=np.float32),
-        "terminated": np.asarray(terminations, dtype=bool),
-        "truncated": np.asarray(truncations, dtype=bool),
-        "final_observation": np.asarray(
-            observation, dtype=np.float32
-        ),  # Keep the last next-state too; it has no corresponding teacher action in this episode.
     }
 
 
@@ -122,16 +112,13 @@ def main():
     # Combine episode arrays into one flat dataset
     arrays = {
         key: np.concatenate([episode[key] for episode in episodes])
-        for key in ("observations", "actions", "rewards", "terminated", "truncated")
+        for key in ("observations", "actions", "rewards")
     }
     arrays["episode_offsets"] = np.concatenate(
         ([0], np.cumsum([len(ep["actions"]) for ep in episodes]))
     )
 
     arrays["episode_seeds"] = np.arange(FIRST_SEED, FIRST_SEED + EPISODES)
-    arrays["final_observations"] = np.stack(
-        [ep["final_observation"] for ep in episodes]
-    )
     arrays["environment"] = np.asarray(ENV_ID)
     arrays["teacher"] = np.asarray(
         f"Gymnasium heuristic; wind={ENABLE_WIND}; continuous={CONTINUOUS_ACTIONS}"
@@ -143,22 +130,5 @@ def main():
     print("Saved", len(arrays["actions"]), "examples to", OUTPUT_PATH)
 
 
-def print_data():
-    # helper function for me to visualize data
-    with np.load(INSPECTION_PATH, allow_pickle=False) as data:
-        n = len(data["actions"])
-
-        for step in [0, 1, n - 2, n - 1]:
-            if step == n - 2:
-                print("\n...")
-
-            print(f"\nStep {step}")
-            print("  State: ", data["observations"][step])
-            print("  Action:", data["actions"][step])
-            print("  Reward:", data["rewards"][step])
-
-
-# Run the program when invoked with python -m src.<module>, not when imported.
 if __name__ == "__main__":
     main()
-    # print_data()

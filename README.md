@@ -3,7 +3,7 @@
 A GPT-style decoder-only Transformer with multi-head Attention and **100k parameters**, built from scratch in PyTorch.
 
 <p align="center">
-  <img src="assets/separator.svg" width="50%" alt="">
+  <img src="assets/separator.svg" width="50%" alt="---">
 </p>
 
 I repurposed the GPT architecture to land Gymnasium's LunarLander because:
@@ -111,7 +111,7 @@ Shape: (B, 8, 64)
           ▼
 TRANSFORMER BLOCK 2
 ...
-Same Structure
+[Same Structure]
 ...
           │
           ▼
@@ -180,13 +180,12 @@ Pretraining uses supervised learning to predict actions. We generated the traini
 ### 2. Reinforcement learning (PPO)
 
 ```text
-                     ┌→ existing action head: choose an action
+                     ┌→ Existing Action Head: choose an action
 Pretrained GPT ──────┤
-                     └→ new value head for RL: predict future reward
+                     └→ New Value Head for RL: predict future reward
 ```
 
-PPO starts with the pretrained GPT and action head. We then use SB3 to add a randomly initialized `nn.Linear(64, 1)` value head (65 parameters) to predict future reward from the same network. 
-
+PPO starts with the pretrained GPT minus the last layer (action head). We then use SB3 to add a randomly initialized `nn.Linear(64, 1)` value head (65 parameters) to predict future reward from the same network. 
 
 The actor loss trains the action head, the value loss trains the value head, and both update the shared GPT.
 

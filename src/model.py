@@ -11,18 +11,7 @@ Glossary
 - T (timesteps): Number of observations in each history window.
 - C (embedding dimension): Number of learned features per observation.
 
-- Embedding: Learned vector representation of an observation.
 - Head size: Dimensions in one attention head's query, key, value, and output.
-
-- Causal mask: Prevents a timestep from attending to future timesteps.
-
-- Softmax: Converts scores into nonnegative weights that sum to one.
-- LayerNorm: Normalizes each timestep's features, then applies learned scale and bias.
-
-- Residual connection: Adds a layer's input to its output to preserve information.
-- Feedforward: Network that processes each timestep independently.
-- ReLU: Nonlinear activation that replaces negative values with zero.
-- Logits: Raw action scores before converting them into probabilities.
 """
 
 @dataclass
@@ -53,7 +42,6 @@ class Head(nn.Module):
         # A lower-triangular mask permits only present/past positions.
         # A buffer moves with the model and is saved, but the optimizer does not train it.
         # Borrowed from 3b1b
-        # self.tril 
         self.register_buffer(
             "tril",
             torch.tril(
@@ -65,7 +53,7 @@ class Head(nn.Module):
 
     def forward(self, x):
         # B = independent examples, T = observations, C = features per observation.
-        batch, time, channels = x.shape
+        _, time, _ = x.shape
 
         k = self.key(x)  # (B, T, head_size)
         q = self.query(x)  # (B, T, head_size)
@@ -188,7 +176,7 @@ class GPT(nn.Module):
     def get_features(self, states):
         # run the observations through the transformer and returns their learned representations, before the action head
         # Input: (B, T, 8)
-        batch, time, observations = states.shape
+        _, time, observations = states.shape
 
         if observations != 8 or not 1 <= time <= self.config.context_length:
             raise ValueError(

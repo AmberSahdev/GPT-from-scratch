@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 
 from .data import TrajectoryDataset
 from .model import GPT, ModelConfig
+from .utils import get_device
 
-# Settings for supervised training
 INITIAL_CHECKPOINT = Path("runs/experiment-01/untrained.pt")
 DATA_PATH = Path("data/demonstrations.npz")
 EPOCHS = 10
@@ -20,16 +20,6 @@ WEIGHT_DECAY = 0.01
 MAX_GRAD_NORM = 1.0
 TRAIN_FRACTION = 0.8
 SEED = 42
-
-
-def get_device():
-    # MPS is PyTorch's GPU backend for supported Macs; CUDA is for NVIDIA GPUs.
-    # is_available checks that the backend is usable, not just compiled into PyTorch.
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
 
 
 # Evaluate teacher-action agreement on data without changing model weights
@@ -59,8 +49,10 @@ def measure(model, loader, device):
 def main():
     if EPOCHS < 1 or BATCH_SIZE < 1:
         raise ValueError("Use positive EPOCHS and BATCH_SIZE")
+    
     if not 0 < TRAIN_FRACTION < 1:
         raise ValueError("TRAIN_FRACTION must be between 0 and 1")
+    
     output_dir = INITIAL_CHECKPOINT.parent
     device = get_device()
     print("Training device:", device)
@@ -101,6 +93,7 @@ def main():
     # Measure the full training loop, including validation and checkpoint saves.
     # perf_counter measures elapsed wall-clock time with a monotonic clock.
     training_started = perf_counter()
+    
     with (output_dir / "pretrain.csv").open("w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["epoch", "train_loss", "validation_loss", "validation_accuracy"])
@@ -139,7 +132,7 @@ def main():
             if validation_loss < best_loss:
                 best_loss = validation_loss
                 torch.save({"config": checkpoint["config"], "model": model.state_dict(),
-                            "optimizer": optimizer.state_dict(), "epoch": epoch,
+                            "epoch": epoch,
                             "validation_loss": validation_loss}, output_dir / "pretrained.pt")
 
     elapsed_seconds = perf_counter() - training_started
