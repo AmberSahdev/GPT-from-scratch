@@ -13,9 +13,13 @@ LunarLander has
     - 3: right engine
 """
 
+from dataclasses import replace
+
 import gymnasium as gym
 from gymnasium.envs.box2d.lunar_lander import heuristic
 from gymnasium.wrappers import FrameStackObservation
+
+from .robot_lander import RobotLander
 
 ENV_ID = "LunarLander-v3"
 CONTINUOUS_ACTIONS = False
@@ -27,7 +31,7 @@ DEMO_RENDER_MODE = "human"
 # Create a fresh simulator instance. None skips rendering and runs faster.  "human" == live window.
 def make_environment(render_mode=None):
     return gym.make(
-        ENV_ID,
+        replace(gym.spec(ENV_ID), entry_point=RobotLander),
         continuous=CONTINUOUS_ACTIONS,
         enable_wind=ENABLE_WIND,  # Disable wind to keep the first learning task simpler.
         render_mode=render_mode,
