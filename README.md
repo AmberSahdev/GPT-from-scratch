@@ -6,7 +6,7 @@ A GPT-style decoder-only Transformer with multi-head Attention and **100k parame
   <img src="assets/separator.svg" width="50%" alt="---">
 </p>
 
-I repurposed the GPT architecture to land a Transformer (Optimus Prime /Gymnasium's LunarLander) because:
+I repurposed the GPT architecture to land a Transformer (Optimus Prime / Gymnasium's LunarLander) because:
 1. I don't have enough compute to train a good language model locally.
 2. I wanted an easy way to incorporate RL.
 3. I like visuals.
